@@ -1,5 +1,5 @@
 # LGWiFi
-Search WiFi on Mac OS, iOS can't do this.
+Search and connect WiFi on Mac OS, iOS can't do this.
 
 
 Usage:
