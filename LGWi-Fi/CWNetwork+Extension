@@ -1,0 +1,13 @@
+//
+//  CWNetwork+Extension.h
+//  text_Wifi
+//
+//  Created by 东途 on 2016/10/28.
+//  Copyright © 2016年 displayten. All rights reserved.
+//
+
+#import <CoreWLAN/CoreWLAN.h>
+
+@interface CWNetwork (Extension)
+- (BOOL)connectToThisNetworkWithPassword:(NSString *_Nullable)password;
+@end
