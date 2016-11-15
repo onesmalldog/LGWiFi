@@ -9,19 +9,27 @@
 #import "LGWifiManager.h"
 
 
-@interface LGWifiManager()
+@interface LGWifiManager() <CWEventDelegate>
 @property (strong, nonatomic) CWInterface *currentInterface;
 @end
 @implementation LGWifiManager {
-    dispatch_queue_t _waitQueue;
-    NSString *_currentWifiSSID;
+    NSError *_error;
+}
+
+- (NSString *)errorDescription {
+    return _error.description;
+}
+- (NSError *)error {
+    return _error;
+}
+- (NSString *)getCurrentSSID {
+    return self.currentInterface.ssid;
 }
 
 + (instancetype _Nonnull)lg_sharedManager {
     static LGWifiManager *manager;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        
         manager = [[self alloc] initSelf];
     });
     return manager;
@@ -33,7 +41,7 @@
     
     result = [self.currentInterface scanForNetworksWithSSID:nil error:&error];
     if (error) {
-        NSLog(@"Error: %@", error.localizedDescription);
+        _error = error;
         return nil;
     }
     return result;
@@ -52,6 +60,13 @@
 }
 - (BOOL)connectWifiFromName:(NSString *_Nonnull)name password:(NSString *_Nullable)password {
     
+    NSSet *set = [self.currentInterface cachedScanResults];
+    for (CWNetwork *network in set) {
+        NSString *searchName = network.ssid;
+        if ([searchName isEqualToString:name]) {
+            return [self connectWifiWithNetwork:network password:password];
+        }
+    }
     for (CWNetwork *network in [self findNetworks]) {
         NSString *searchName = network.ssid;
         if ([searchName isEqualToString:name]) {
@@ -62,11 +77,12 @@
 }
 
 - (BOOL)connectWifiWithNetwork:(CWNetwork *_Nonnull)network password:(NSString *_Nullable)password  {
+    
     NSError *error;
-    if (!_waitQueue) _waitQueue = dispatch_queue_create("waitingforconnection", DISPATCH_QUEUE_SERIAL);
     BOOL result = [self.currentInterface associateToNetwork:network password:password error:&error];
-    if (result) {
-        _currentWifiSSID = network.ssid;
+    
+    if (!result) {
+        _error = error;
     }
     return result;
 }
@@ -75,8 +91,13 @@
     if (self = [super init]) {
         
         CWInterface *defaultInterface = [CWWiFiClient sharedWiFiClient].interface;
-        NSString *name = defaultInterface.interfaceName;
         
+        [CWWiFiClient sharedWiFiClient].delegate = self;
+        BOOL result = [[CWWiFiClient sharedWiFiClient] startMonitoringEventWithType:CWEventTypeSSIDDidChange error:nil];
+        if (result) {
+            
+        }
+        NSString *name = defaultInterface.interfaceName;
         if (defaultInterface && name) {
             
             self.currentInterface = defaultInterface;
@@ -89,5 +110,11 @@
         }
     }
     return self;
+}
+
+- (void)ssidDidChangeForWiFiInterfaceWithName:(NSString *)interfaceName {
+    if ([self.delegate respondsToSelector:@selector(lg_ssidDidChangeToSSID:)]) {
+        [self.delegate lg_ssidDidChangeToSSID:self.currentSSID];
+    }
 }
 @end
