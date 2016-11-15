@@ -10,4 +10,5 @@
 #define LGWifi_h
 #import "LGWifiManager.h"
 #import "CWNetwork+Extension.h"
+#import "LGGetIPAddress.h"
 #endif /* LGWifi_h */
